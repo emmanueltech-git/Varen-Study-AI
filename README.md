@@ -60,7 +60,7 @@ Deploy the folder to a Node.js host with HTTPS. Configure the environment variab
 
 ## GitHub and Vercel deployment
 
-This project uses a static PWA frontend in `public/` and Vercel serverless handlers in `api/`. The legacy `server.js` is for local Node.js hosting; Vercel uses the API handlers directly and does not run `server.js` as a persistent process.
+This project uses a static PWA frontend in `public/` and Vercel serverless handlers in `api/`. `scripts/local-server.js` is only for local Node.js hosting; Vercel uses the API handlers directly and does not run a persistent server process.
 
 ### 1. Create and push the GitHub repository
 
