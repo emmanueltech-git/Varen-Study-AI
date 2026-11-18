@@ -3,6 +3,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
+const { GeminiTutorError, generateTutorReply, DEFAULT_MODEL } = require("./lib/gemini");
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, "public");
@@ -64,9 +65,11 @@ function decodePdfText(buffer) {
 const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/api/status") {
     return send(res, 200, JSON.stringify({
-        onlineAiConfigured: Boolean(process.env.AI_API_KEY),
-        provider: process.env.AI_BASE_URL || "https://api.openai.com",
-        model: process.env.AI_MODEL || "gpt-4.1-mini"
+        onlineAiConfigured: Boolean(process.env.GEMINI_API_KEY),
+        provider: "Google Gemini",
+        model: process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL,
+        fallbackConfigured: Boolean(process.env.GEMINI_FALLBACK_MODEL?.trim()),
+        fallbackModel: process.env.GEMINI_FALLBACK_MODEL?.trim() || null
     }));
   }
 
@@ -88,31 +91,22 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && req.url === "/api/chat") {
-    if (!process.env.AI_API_KEY) return send(res, 503, JSON.stringify({error:"Online AI is not configured. Offline study tools still work."}));
+    if (!process.env.GEMINI_API_KEY) return send(res, 503, JSON.stringify({error:"Online AI is not configured. Offline study tools still work."}));
     readJson(req, 100000, async (error, body) => {
         if (error) return send(res, 400, JSON.stringify({error:error.message}));
       try {
-        const messages = Array.isArray(body.messages) ? body.messages.slice(-12).filter(m => typeof m.content === "string") : [];
-        if (!messages.length) return send(res, 400, JSON.stringify({error:"Add a question first."}));
-        const department = ["Community Health","Coding and Technology","General Studies"].includes(body.department) ? body.department : "General Studies";
-        const subject = typeof body.subject === "string" ? body.subject.slice(0,100) : "General";
-        const upstream = await fetch(process.env.AI_BASE_URL || "https://api.openai.com/v1/chat/completions", {
-          method:"POST",
-          headers:{"Authorization":`Bearer ${process.env.AI_API_KEY}`, "Content-Type":"application/json"},
-          body:JSON.stringify({
-            model:process.env.AI_MODEL || "gpt-4.1-mini",
-            messages:[
-              {role:"system",content:`You are Varen Study AI, a supportive tutor for ${department}, subject: ${subject}. Explain step by step with age-appropriate language. Never claim to be an official examination, clinical, or accredited source. For health topics, distinguish educational information from professional medical advice and never diagnose or prescribe. For coding, use safe examples and explain execution only conceptually; never instruct destructive actions.`},
-              ...messages
-            ],
-            temperature:0.4
-          })
+        const result = await generateTutorReply({
+          messages: body.messages,
+          department: body.department,
+          subject: body.subject
         });
-        const data = await upstream.json();
-        if (!upstream.ok) return send(res, upstream.status, JSON.stringify({error:data.error?.message || "AI provider request failed."}));
-        send(res, 200, JSON.stringify({reply:data.choices?.[0]?.message?.content || "I couldn't generate a reply."}));
-      } catch (e) {
-        send(res, 500, JSON.stringify({error:"Could not contact the online AI service."}));
+        send(res, 200, JSON.stringify(result));
+      } catch (error) {
+        const status = error instanceof GeminiTutorError ? error.status : 502;
+        if (error instanceof GeminiTutorError && error.retryAfter) res.setHeader("Retry-After", String(error.retryAfter));
+        send(res, status, JSON.stringify({
+          error: error instanceof GeminiTutorError ? error.message : "Could not contact the Gemini service. Please try again later."
+        }));
       }
     });
     return;

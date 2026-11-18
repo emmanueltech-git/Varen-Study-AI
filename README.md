@@ -14,34 +14,35 @@ An installable, offline-first Progressive Web App (PWA) with separate Community 
 - Service worker and web app manifest for installation
 
 ## Requirements
-- Node.js 18 or newer
+- Node.js 22 or newer (required by the official `@google/genai` SDK)
 - Google Chrome or another modern browser
 
 ## Run locally
 1. Extract the ZIP.
 2. Open a terminal in the extracted `varen-study-ai` folder.
-3. Run `npm start` (there are no external npm packages).
+3. Run `npm install` once, then `npm start`.
 4. Open `http://localhost:3000` in Chrome.
 5. For a syntax check, run `npm run check`.
 
 The service worker and install prompt work on `localhost`. For installation on a phone over the internet, deploy the app to a host that provides HTTPS.
 
-## Optional online AI
-The app works without an AI key. To enable online AI, set these environment variables before starting the server:
+## Optional Gemini AI tutor
+The app works without a Gemini key; the offline study helper continues to work. The server uses Google's official `@google/genai` SDK. Configure these variables on the server or in Vercel Project Settings:
 
-- `AI_API_KEY` — secret API key from an AI provider compatible with the OpenAI Chat Completions API
-- `AI_MODEL` — optional model name (default: `gpt-4.1-mini`)
-- `AI_BASE_URL` — optional compatible API endpoint (default: OpenAI endpoint)
-- `PORT` — optional server port (default: `3000`)
+- `GEMINI_API_KEY` — Google AI Studio API key; required only to enable online responses
+- `GEMINI_MODEL` — primary model; defaults to `gemini-3.8-flash`
+- `GEMINI_FALLBACK_MODEL` — optional fallback model; set to `gemini-3.1-flash-lite` to retry transient service errors and rate limits on that model. Leave empty to disable fallback.
+- `PORT` — optional local server port (default: `3000`)
 
 Example (PowerShell):
 ```powershell
-$env:AI_API_KEY="YOUR_SECRET_KEY"
-$env:AI_MODEL="gpt-4.1-mini"
+$env:GEMINI_API_KEY="YOUR_SECRET_KEY"
+$env:GEMINI_MODEL="gemini-3.8-flash"
+$env:GEMINI_FALLBACK_MODEL="gemini-3.1-flash-lite"
 npm start
 ```
 
-Never place an API key in `public/app.js`, HTML, or any browser-side file. Do not publish your key or share it in chat. If online AI is not configured, the app automatically uses its offline helper.
+The current model identifiers are `gemini-3.8-flash` and `gemini-3.1-flash-lite`. Never place an API key in `public/app.js`, HTML, or any browser-side file. Do not publish your key or share it in chat. If online AI is not configured, the app automatically uses its offline helper. Google Gemini rate limits can vary by model and account tier; when configured, the fallback is attempted for rate-limit and temporary service errors. If that also fails, the API returns a retryable error and the UI falls back to local study tools.
 
 ## Question-bank import format
 The Question Bank screen accepts a JSON array. Each entry should contain `department` (`chw`, `coding`, or `general`), `subject`, `topic`, `difficulty`, `type` (`mcq`, `truefalse`, or `short`), `question`, and `explanation`. MCQ entries also contain `options` and `correctIndex`. True/false entries contain `correctAnswer`. Short-answer entries contain `correctAnswer` and may contain `acceptedAnswers`.
@@ -89,11 +90,11 @@ In the Vercel dashboard:
 
 | Variable | Required | Value |
 |---|---|---|
-| `AI_API_KEY` | No, to enable AI | Provider secret key |
-| `AI_MODEL` | No | Provider model, default `gpt-4.1-mini` |
-| `AI_BASE_URL` | No | Chat completions endpoint, default `https://api.openai.com/v1/chat/completions` |
+| `GEMINI_API_KEY` | No, to enable AI | Google AI Studio API key (server-side secret) |
+| `GEMINI_MODEL` | No | `gemini-3.8-flash` |
+| `GEMINI_FALLBACK_MODEL` | No | Optional; `gemini-3.1-flash-lite` |
 
-Set `AI_API_KEY` separately for Production, Preview and Development environments if each should support AI. Never add the key to `NEXT_PUBLIC_*`, `VITE_*`, `public/`, HTML or Git.
+Set `GEMINI_API_KEY` separately for Production, Preview and Development environments if each should support AI. Never add the key to `NEXT_PUBLIC_*`, `VITE_*`, `public/`, HTML or Git.
 
 Deploy the project. Vercel serves `public/` over HTTPS and maps `api/status.js`, `api/chat.js` and `api/documents.js` to `/api/status`, `/api/chat` and `/api/documents`.
 
@@ -106,7 +107,7 @@ Open:
 - `/manifest.webmanifest` — PWA manifest
 - `/sw.js` — service worker
 
-Without `AI_API_KEY`, `/api/chat` intentionally returns HTTP 503 and the frontend uses its offline helper. With a valid provider key, send a study question through the AI Tutor.
+Without `GEMINI_API_KEY`, `/api/chat` intentionally returns HTTP 503 and the frontend uses its offline helper. With a valid key, send a study question through the AI Tutor.
 
 ### 4. Redeploy after updates
 

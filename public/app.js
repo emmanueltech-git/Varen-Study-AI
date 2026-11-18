@@ -251,7 +251,9 @@ async function askTutor() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Online AI unavailable");
       answer = data.reply;
-      $("#ai-mode").textContent = "Online AI tutor";
+      $("#ai-mode").textContent = data.fallbackUsed
+        ? `Gemini fallback · ${data.model}`
+        : `Gemini tutor · ${data.model}`;
     } catch (error) {
       answer = offlineAnswer(text);
       $("#ai-mode").textContent = "Offline helper · " + error.message;
@@ -270,7 +272,9 @@ async function updateAiMode() {
   try {
     const response = await fetch("/api/status");
     const status = await response.json();
-    $("#ai-mode").textContent = status.onlineAiConfigured ? "Online AI connected" : "Online AI not configured · offline helper available";
+    $("#ai-mode").textContent = status.onlineAiConfigured
+      ? `Google Gemini · ${status.model}${status.fallbackConfigured ? ` · fallback ${status.fallbackModel}` : ""}`
+      : "Gemini not configured · offline helper available";
   } catch (_) {
     $("#ai-mode").textContent = navigator.onLine ? "Could not check AI connection" : "Offline study helper";
   }
@@ -730,8 +734,8 @@ async function updateSettingsAiStatus() {
     const response = await fetch("/api/status");
     const status = await response.json();
     $("#settings-ai-status").textContent = status.onlineAiConfigured
-      ? `Connected provider configuration: ${status.provider} · ${status.model}`
-      : "Online AI is not configured. Offline tools remain available.";
+      ? `Connected: ${status.provider} · ${status.model}${status.fallbackConfigured ? ` · fallback ${status.fallbackModel}` : ""}`
+      : "Gemini is not configured. Offline tools remain available.";
   } catch (_) {
     $("#settings-ai-status").textContent = navigator.onLine ? "Could not contact the server status endpoint." : "Offline mode: server status unavailable.";
   }
