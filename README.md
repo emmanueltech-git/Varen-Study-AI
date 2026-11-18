@@ -24,6 +24,8 @@ An installable, offline-first Progressive Web App (PWA) with separate Community 
 4. Open `http://localhost:3000` in Chrome.
 5. For a syntax check, run `npm run check`.
 
+The local server loads the root `.env` file at startup without overriding variables already set by the shell. Set `GEMINI_MODEL=gemini-3.8-flash` and a valid `GEMINI_API_KEY` there to enable online responses. Visit `/api/gemini-check` to send a minimal request to the configured primary model; the endpoint reports whether it succeeded and provides sanitized error diagnostics if it did not. Each check sends a small request to Google and may count toward account quota.
+
 The service worker and install prompt work on `localhost`. For installation on a phone over the internet, deploy the app to a host that provides HTTPS.
 
 ## Optional Gemini AI tutor
@@ -96,7 +98,7 @@ In the Vercel dashboard:
 
 Set `GEMINI_API_KEY` separately for Production, Preview and Development environments if each should support AI. Never add the key to `NEXT_PUBLIC_*`, `VITE_*`, `public/`, HTML or Git.
 
-Deploy the project. Vercel serves `public/` over HTTPS and maps `api/status.js`, `api/chat.js` and `api/documents.js` to `/api/status`, `/api/chat` and `/api/documents`.
+Deploy the project. Vercel serves `public/` over HTTPS and maps `api/status.js`, `api/chat.js`, `api/gemini-check.js` and `api/documents.js` to `/api/status`, `/api/chat`, `/api/gemini-check` and `/api/documents`.
 
 ### 3. Verify deployment
 
@@ -104,6 +106,7 @@ Open:
 
 - `/` — application
 - `/api/status` — should report whether online AI is configured
+- `/api/gemini-check` — sends a minimal request to the configured primary model and returns sanitized diagnostics
 - `/manifest.webmanifest` — PWA manifest
 - `/sw.js` — service worker
 

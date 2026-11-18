@@ -3,7 +3,15 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
-const { GeminiTutorError, generateTutorReply, DEFAULT_MODEL } = require("../lib/gemini");
+const envFile = path.join(__dirname, "..", ".env");
+if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
+const {
+  GeminiTutorError,
+  generateTutorReply,
+  getConfiguredModel,
+  checkGemini,
+  publicDiagnostic
+} = require("../lib/gemini");
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, "..", "public");
@@ -13,12 +21,12 @@ const MIME = {
   ".webmanifest":"application/manifest+json", ".svg":"image/svg+xml"
 };
 
-function send(res, status, body, type="application/json; charset=utf-8") {
+function send(res, status, body, type="application/json; charset=utf-8", cacheControl) {
   res.writeHead(status, {
     "Content-Type":type,
     "X-Content-Type-Options":"nosniff",
     "Referrer-Policy":"no-referrer",
-    "Cache-Control": type.includes("text/html") ? "no-cache" : "public, max-age=300"
+    "Cache-Control": cacheControl || (type.includes("text/html") ? "no-cache" : "public, max-age=300")
   });
   res.end(body);
 }
@@ -65,12 +73,34 @@ function decodePdfText(buffer) {
 const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && req.url === "/api/status") {
     return send(res, 200, JSON.stringify({
-        onlineAiConfigured: Boolean(process.env.GEMINI_API_KEY),
+        onlineAiConfigured: Boolean(process.env.GEMINI_API_KEY?.trim()),
         provider: "Google Gemini",
-        model: process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL,
+        model: getConfiguredModel(),
         fallbackConfigured: Boolean(process.env.GEMINI_FALLBACK_MODEL?.trim()),
         fallbackModel: process.env.GEMINI_FALLBACK_MODEL?.trim() || null
     }));
+  }
+
+  if (req.method === "GET" && (req.url || "").split("?")[0] === "/api/gemini-check") {
+    const apiKeyConfigured = Boolean(process.env.GEMINI_API_KEY?.trim());
+    try {
+      const result = await checkGemini();
+      return send(res, 200, JSON.stringify({
+        apiKeyConfigured,
+        model: result.model,
+        requestSucceeded: true
+      }), "application/json; charset=utf-8", "no-store");
+    } catch (error) {
+      const status = error instanceof GeminiTutorError ? error.status : 502;
+      const diagnostic = publicDiagnostic(error, status);
+      return send(res, status, JSON.stringify({
+        apiKeyConfigured,
+        model: getConfiguredModel(),
+        requestSucceeded: false,
+        error: error instanceof GeminiTutorError ? error.message : diagnostic.errorMessage,
+        diagnostic
+      }), "application/json; charset=utf-8", "no-store");
+    }
   }
 
   if (req.method === "POST" && req.url === "/api/documents") {
@@ -91,7 +121,6 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && req.url === "/api/chat") {
-    if (!process.env.GEMINI_API_KEY) return send(res, 503, JSON.stringify({error:"Online AI is not configured. Offline study tools still work."}));
     readJson(req, 100000, async (error, body) => {
         if (error) return send(res, 400, JSON.stringify({error:error.message}));
       try {
@@ -103,9 +132,11 @@ const server = http.createServer(async (req, res) => {
         send(res, 200, JSON.stringify(result));
       } catch (error) {
         const status = error instanceof GeminiTutorError ? error.status : 502;
+        const diagnostic = publicDiagnostic(error, status);
         if (error instanceof GeminiTutorError && error.retryAfter) res.setHeader("Retry-After", String(error.retryAfter));
         send(res, status, JSON.stringify({
-          error: error instanceof GeminiTutorError ? error.message : "Could not contact the Gemini service. Please try again later."
+          error: error instanceof GeminiTutorError ? error.message : diagnostic.errorMessage,
+          diagnostic
         }));
       }
     });
