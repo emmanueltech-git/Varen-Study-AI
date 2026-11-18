@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="Varen Study AI — your offline-first study companion.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <title>Varen Study AI</title>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="Varen Study AI home"><span class="brand-mark">V</span><span><b>Varen Study AI</b><small>LEARN · BUILD · EXCEL</small></span></a>
+      <nav id="nav">
+        <button class="nav-item active" data-view="home">⌂ <span>Dashboard</span></button>
+        <button class="nav-item" data-view="chw">＋ <span>Community Health</span></button>
+        <button class="nav-item" data-view="coding">⌘ <span>Coding & Technology</span></button>
+        <button class="nav-item" data-view="general">◫ <span>General Studies</span></button>
+        <button class="nav-item" data-view="tutor">✦ <span>AI Tutor</span></button>
+        <button class="nav-item" data-view="questionbank">✓ <span>Question Bank</span></button>
+        <button class="nav-item" data-view="notes">▤ <span>My Notes</span></button>
+        <button class="nav-item" data-view="cards">▣ <span>Flashcards</span></button>
+        <button class="nav-item" data-view="planner">▦ <span>Study Planner</span></button>
+        <button class="nav-item" data-view="progress">◉ <span>Progress & Performance</span></button>
+        <button class="nav-item" data-view="settings">⚙ <span>Settings</span></button>
+      </nav>
+      <div class="sidebar-bottom"><span class="status-dot"></span><span id="connection-label">Offline-ready</span><button id="install-btn" class="install-btn" hidden>Install app</button></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><button id="menu-btn" class="icon-btn" aria-label="Open menu">☰</button><div><span class="eyebrow">YOUR LEARNING WORKSPACE</span><h1 id="page-title">Dashboard</h1></div><button id="theme-btn" class="icon-btn" aria-label="Switch theme">◐</button></header>
+      <section id="view" aria-live="polite"></section>
+      <footer>Varen Study AI <span>·</span> Learn at your pace. Verify important information with your instructors.</footer>
+    </main>
+  </div>
+  <div id="toast" role="status" class="toast"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

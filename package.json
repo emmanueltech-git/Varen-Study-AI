@@ -1,0 +1,12 @@
+{
+  "name": "varen-study-ai",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Installable offline-first study PWA with optional online AI tutor",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check public/app.js && node --check api/status.js && node --check api/chat.js && node --check api/documents.js && node -e \"JSON.parse(require('fs').readFileSync('public/questions.json','utf8')); console.log('Question bank JSON valid')\"",
+    "build": "npm run check"
+  },
+  "engines": { "node": ">=18" }
+}
